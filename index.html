@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>For My Bestie 💖</title>
+  <style>
+    @keyframes typingFinal {
+  from { width: 0; }
+  to { width: 100%; }
+}
+    body {
+      margin: 0;
+      font-family: 'Comic Sans MS', cursive;
+      background: linear-gradient(to right, #fbc2eb, #a6c1ee);
+      color: #333;
+      overflow: hidden;
+    }
+    .screen {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      text-align: center;
+      padding: 2rem;
+      animation: fadeIn 1s ease-in-out;
+    }
+    .active {
+      display: flex;
+    }
+    button {
+      padding: 1rem 2rem;
+      background: #ff69b4;
+      color: white;
+      border: none;
+      border-radius: 1rem;
+      font-size: 1.2rem;
+      cursor: pointer;
+      transition: transform 0.3s ease, background 0.3s;
+      margin-top: 1rem;
+    }
+    button:hover {
+      background: #ff1493;
+      transform: scale(1.1);
+    }
+    canvas, input {
+      margin: 1rem;
+    }
+    @keyframes popBalloon {
+      0% { transform: scale(1); opacity: 1; }
+      100% { transform: scale(2); opacity: 0; }
+    }
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(20px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+    #popupBox {
+      position: absolute;
+      top: 20%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      padding: 2rem;
+      border-radius: 1rem;
+      box-shadow: 0 0 20px rgba(0,0,0,0.2);
+      max-width: 80%;
+      display: none;
+      z-index: 10;
+      animation: fadeIn 1s ease-in-out;
+    }
+    #typedText {
+      border-right: 2px solid #333;
+      white-space: nowrap;
+      overflow: hidden;
+      width: 0;
+      animation: typing 4s steps(60, end) forwards;
+    }
+    @keyframes typing {
+      from { width: 0; }
+      to { width: 100%; }
+    }
+    #closePopup {
+      position: absolute;
+      top: 10px;
+      right: 15px;
+      background: none;
+      border: none;
+      font-size: 1.5rem;
+      cursor: pointer;
+      color: #666;
+    }
+    #finalMessage {
+      display: none;
+      animation: fadeIn 1s ease-in-out;
+    }
+    @media (max-width: 600px) {
+      h2 {
+        font-size: 1.5rem;
+      }
+      button {
+        font-size: 1rem;
+        padding: 0.8rem 1.5rem;
+      }
+      #finalLetterBox {
+        padding: 1rem;
+      }
+      #typedFinalText {
+        font-size: 1rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="screen1" class="screen active">
+    <h2>Game 1: Balloon Pop 🎈</h2>
+    <canvas id="balloonCanvas" width="300" height="300" style="background: #fff0f5; border-radius: 10px;"></canvas>
+    <p id="balloonScore">Popped: 0/3</p>
+    <button onclick="startBalloonGame()">Start</button>
+  </div>
+
+  <div id="screen2" class="screen">
+    <h2>Game 2: Fill in the Blanks 💕</h2>
+    <p>Complete the phrase: <strong>I ____ You</strong></p>
+    <input type="text" id="wordInput" placeholder="Fill the blank...">
+    <p id="wordResult"></p>
+    <button onclick="checkWord()">Submit</button>
+    <button onclick="nextScreen(3)">Next ⬆️</button>
+  </div>
+
+  <div id="screen3" class="screen">
+    <h2>Game 3: Memory Match 💞</h2>
+    <p>Match the pairs!</p>
+    <div id="memoryBoard" style="display: flex; flex-wrap: wrap; justify-content: center;"></div>
+    <button onclick="nextScreen(4)">Next ⬆️</button>
+  </div>
+
+  <div id="screen4" class="screen">
+    <h2>Game 4: Truth Time 🌸</h2>
+    <p>Would you go on a cute date with me? 🥺</p>
+    <button onclick="answer('yes')">Yes 😍</button>
+    <button onclick="answer('no')">No 😢</button>
+    <p id="answerResult"></p>
+    <button onclick="nextScreen(5)">Final Surprise 💖</button>
+  </div>
+
+  <div id="screen5" class="screen">
+    <h2 id="surprise">✨ Final Surprise ✨</h2>
+    <button id="proposal" onclick="showProposal()">Click to Open</button>
+    <div id="finalLetterBox" style="display:none; margin-top: 2rem;">
+  <p id="typedFinalText" style="white-space: pre-line; font-size: 1.2rem; border-right: 2px solid #333; width: 0; overflow: hidden;"></p>
+  <div class="finalButtons" style="margin-top: 2rem;">
+  </div>
+</div>
+
+  </div>
+
+  <div id="popupBox">
+    <button id="closePopup" onclick="closePopup()">&times;</button>
+    <p id="typedText"></p>
+  </div>
+
+  <script>
+    function nextScreen(num) {
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      document.getElementById(`screen${num}`).classList.add('active');
+    }
+
+    let balloonCanvas = document.getElementById("balloonCanvas");
+    let bctx = balloonCanvas.getContext("2d");
+    let balloonX = 150, balloonY = 300, popped = 0, balloonActive = false;
+    const popupMessages = [
+      "Every balloon you pop fills my heart a little more. You make my world colorful, Angel 💖",
+      "With every burst, I fall for you even deeper. You're magic to me ✨",
+      "You're the reason behind all my smiles. Will you be mine forever? 💘"
+    ];
+
+    function drawBalloon() {
+      bctx.clearRect(0, 0, 300, 300);
+      if (!balloonActive) return;
+      bctx.beginPath();
+      bctx.ellipse(balloonX, balloonY, 20, 30, 0, 0, 2 * Math.PI);
+      bctx.fillStyle = "pink";
+      bctx.fill();
+      bctx.stroke();
+    }
+
+    function animateBalloon() {
+      if (!balloonActive) return;
+      balloonY -= 2;
+      if (balloonY < 0) {
+        resetBalloon();
+      }
+      drawBalloon();
+      requestAnimationFrame(animateBalloon);
+    }
+
+    function resetBalloon() {
+      balloonX = Math.random() * 260 + 20;
+      balloonY = 300;
+    }
+
+    function startBalloonGame() {
+      popped = 0;
+      document.getElementById("balloonScore").textContent = `Popped: 0/3`;
+      balloonActive = true;
+      resetBalloon();
+      animateBalloon();
+      balloonCanvas.onclick = function(e) {
+        const rect = balloonCanvas.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+        if (Math.abs(x - balloonX) < 25 && Math.abs(y - balloonY) < 35) {
+          balloonActive = false;
+          balloonCanvas.style.animation = 'popBalloon 0.5s ease forwards';
+          setTimeout(() => {
+            balloonCanvas.style.animation = '';
+            bctx.clearRect(0, 0, 300, 300);
+          }, 500);
+          showPopupMessage();
+        }
+      }
+    }
+
+    function showPopupMessage() {
+      if (popped >= 3) return;
+      const popup = document.getElementById("popupBox");
+      const typed = document.getElementById("typedText");
+      popup.style.display = 'block';
+      typed.style.width = '0';
+      typed.textContent = popupMessages[popped];
+      typed.style.animation = "none";
+      void typed.offsetWidth;
+      typed.style.animation = "typing 4s steps(60, end) forwards";
+    }
+
+    function closePopup() {
+      document.getElementById("popupBox").style.display = 'none';
+      popped++;
+      document.getElementById("balloonScore").textContent = `Popped: ${popped}/3`;
+      if (popped >= 3) {
+        balloonCanvas.style.display = 'none';
+        nextScreen(2);
+      } else {
+        balloonActive = true;
+        resetBalloon();
+        animateBalloon();
+      }
+    }
+
+    function checkWord() {
+      const input = document.getElementById("wordInput").value.trim().toLowerCase();
+      const result = document.getElementById("wordResult");
+      if (input === "love") {
+        result.textContent = "Correct! 💖";
+        result.style.animation = "popBalloon 0.5s ease-in-out";
+        result.style.color = "green";
+      } else {
+        result.textContent = "Try again!";
+        result.style.color = "red";
+      }
+    }
+
+    const memoryWords = ['💌', '💌', '💍', '💍', '🌹', '🌹', '🎶', '🎶'];
+    let shuffled = memoryWords.sort(() => 0.5 - Math.random());
+    let memoryBoard = document.getElementById("memoryBoard");
+    let flipped = [];
+
+    shuffled.forEach(word => {
+      let div = document.createElement("div");
+      div.textContent = "❓";
+      div.style.width = "60px";
+      div.style.height = "60px";
+      div.style.fontSize = "2rem";
+      div.style.margin = "10px";
+      div.style.background = "#ffe4f7";
+      div.style.borderRadius = "1rem";
+      div.style.display = "flex";
+      div.style.alignItems = "center";
+      div.style.justifyContent = "center";
+      div.style.cursor = "pointer";
+      div.style.transition = "transform 0.4s ease";
+      div.dataset.word = word;
+      div.onclick = function () {
+        if (flipped.length < 2 && !flipped.includes(div)) {
+          div.textContent = word;
+          div.style.transform = "rotateY(180deg)";
+          flipped.push(div);
+          if (flipped.length === 2) {
+            setTimeout(() => {
+              if (flipped[0].dataset.word !== flipped[1].dataset.word) {
+                flipped.forEach(card => {
+                  card.textContent = "❓";
+                  card.style.transform = "rotateY(0deg)";
+                });
+              }
+              flipped = [];
+            }, 1000);
+          }
+        }
+      }
+      memoryBoard.appendChild(div);
+    });
+
+    function answer(ans) {
+      let res = document.getElementById("answerResult");
+      res.style.animation = "popBalloon 0.5s ease-in-out";
+      if (ans === 'yes') {
+        res.textContent = "Awwww yay!!! 💘💘💘";
+      } else {
+        res.textContent = "Oh... still love ya tho 💔";
+      }
+    }
+
+    function showProposal() {
+  const letter = `Hey Angel 🌈,
+
+You came into my life like a rainbow after a storm, bringing color and calm.  
+Every giggle we’ve shared and every secret we’ve whispered has stitched us closer.  
+You’re not just my best friend — you’re my happy place. 🥰  
+I look forward to every “good morning” from you like sunshine.  
+Even your silence speaks comfort to my heart.  
+I never knew friendship could feel this warm — like home.  
+When I say "I love you," I mean it with all the stars in my sky. 🌟  
+You’re my partner in crime, my cuddle bug, my everything.  
+I’d trade a million tomorrows for one more day with you.  
+So here I am, asking the most special person in my world...
+
+Will you be my forever? 💍💕`;
+
+  document.getElementById("surprise").style.display = "none";
+  document.getElementById("proposal").style.display = "none";
+  const finalBox = document.getElementById("finalLetterBox");
+  const typed = document.getElementById("typedFinalText");
+
+  typed.textContent = letter;
+  typed.style.width = '0';
+  typed.style.animation = 'typingFinal 10s steps(120, end) forwards';
+
+  finalBox.style.display = 'block';
+}
+  </script>
+</body>
+</html>
